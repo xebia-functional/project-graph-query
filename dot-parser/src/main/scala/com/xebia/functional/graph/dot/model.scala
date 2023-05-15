@@ -6,7 +6,7 @@ final case class DiGraph(nodes: List[Node], relations: List[NodeRelation]):
   def :+(n: Node): DiGraph = copy(nodes = nodes :+ n)
   def :+(nr: NodeRelation): DiGraph = copy(relations = relations :+ nr)
 
-final case class Node(name: String)
+final case class Node(name: String, shape: Option[String])
 object Node:
   given Show[Node] = Show.show(n => s"""Node(name: "${n.name}")""")
 final case class NodeRelation(from: String, to: String, attributes: Map[String, String])

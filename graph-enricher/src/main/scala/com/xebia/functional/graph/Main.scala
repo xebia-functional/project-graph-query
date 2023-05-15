@@ -4,12 +4,13 @@ import cats.data.NonEmptyList
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.syntax.all.*
 import com.xebia.functional.graph.csv.CSVLoader
-import com.xebia.functional.graph.dot.DOTAlgebra
+import com.xebia.functional.graph.dot.{DOTAlgebra, DiGraph, Node, NodeRelation}
 import com.xebia.functional.graph.instances.*
 
-import java.io.FileReader
+import java.io.{FileReader, FileWriter}
 import java.net.URI
 import java.nio.file.Path
+import scala.annotation.tailrec
 import scala.util.control.NoStackTrace
 
 object Main extends IOApp:
@@ -35,6 +36,46 @@ object Main extends IOApp:
         .map(rel => s"${rel.from.name} -> ${rel.to.name} (${rel.relationType})")
         .mkString("\n")
 
+    def toDiGraphAttributes(moduleRelationType: SBTModuleRelationType): Map[String, String] =
+      moduleRelationType match
+        case SBTModuleRelationType.DependsOn(scopes) =>
+          Map(
+            "style" -> "solid",
+            "extra" -> scopes.map(rs => s"${rs.origin.value}->${rs.target.value}").mkString(";")
+          )
+        case SBTModuleRelationType.Aggregates => Map("style" -> "dashed")
+
+    def nodeShape(module: SBTModule[ModuleData]): Option[String] =
+      module.extra.map(_.moduleType).map {
+        case ModuleType.Microservice => "box3d"
+        case ModuleType.Library => "folder"
+        case ModuleType.Job => "circle"
+        case ModuleType.Notification => "note"
+        case ModuleType.Executable => "Msquare"
+        case ModuleType.Aggregator => "tripleoctagon"
+        case ModuleType.NUC => "polygon"
+        case ModuleType.SparkJupiter => "tab"
+      }
+
+    def toDiGraph(fullGraph: SBTModuleGraph[ModuleData], include: Set[SBTModule[ModuleData]]): DiGraph = {
+      val fullNodeSet = findFullNodeSet(include, include, fullGraph)
+      DiGraph(
+        fullNodeSet.toList.sortBy(_.name).map(m => Node(m.name, nodeShape(m))),
+        fullGraph.relations
+          .filter(mr => fullNodeSet.contains(mr.from)).map(mr => NodeRelation(mr.from.name, mr.to.name, toDiGraphAttributes(mr.relationType)))
+      )
+    }
+
+    @tailrec
+    def findFullNodeSet(
+        current: Set[SBTModule[ModuleData]],
+        findIn: Set[SBTModule[ModuleData]],
+        fullGraph: SBTModuleGraph[ModuleData]
+    ): Set[SBTModule[ModuleData]] = {
+      val newSet = fullGraph.relations.filter(mr => findIn.exists(m => m.name == mr.from.name)).map(_.to).filterNot(current.contains).toSet
+      if (newSet.isEmpty) current else findFullNodeSet(current ++ newSet, newSet, fullGraph)
+    }
+
     for
       paths <- readArg
       (dotPath, csvPath) = paths
@@ -49,6 +90,9 @@ object Main extends IOApp:
       list <- graphAnalyzer.findConnected(graph).map(_.sortBy(_.size).reverse)
       _ <- IO.println(s"Found ${list.size} subgraphs")
       _ <- IO.println(s"Found ${list.count(_.size > 1)} subgraphs with more than one module")
-      _ <- IO.println(list.map(_.map(m => s"${m.name} (${m.extra.map(_.moduleType).getOrElse("<unknown>")})").mkString(", ")).mkString("\n"))
+      _ <- list.zipWithIndex.traverse_ { case (set, index) =>
+        val diGraph = toDiGraph(graph, set)
+        dotParser.writeDOT(new FileWriter(s"target/dot-$index-graph.dot"), diGraph)
+      }
     yield ExitCode.Success
   }

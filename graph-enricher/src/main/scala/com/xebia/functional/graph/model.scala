@@ -23,14 +23,12 @@ object SBTModuleRelationType:
   final case class DependsOn(scopes: List[RelationScope]) extends SBTModuleRelationType
   case object Aggregates extends SBTModuleRelationType
 
-sealed trait DependsOnScope extends Product with Serializable
+sealed abstract class DependsOnScope(val value: String) extends Product with Serializable
 object DependsOnScope:
-  case object Compile extends DependsOnScope
-  case object Test extends DependsOnScope
-  def from(s: String): Option[DependsOnScope] = s match
-    case "compile" => Compile.some
-    case "test" => Test.some
-    case _ => None
+  case object Compile extends DependsOnScope("compile")
+  case object Test extends DependsOnScope("test")
+  def from(s: String): Option[DependsOnScope] =
+    List(Compile, Test).find(_.value == s)
 
 final case class RelationScope(origin: DependsOnScope, target: DependsOnScope)
 
