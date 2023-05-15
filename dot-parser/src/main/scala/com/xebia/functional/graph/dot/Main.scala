@@ -7,7 +7,7 @@ import java.io.InputStreamReader
 
 object Main extends IOApp:
   override def run(args: List[String]): IO[ExitCode] =
-    DOTParser
+    DOTAlgebra
       .impl[IO]
       .parseDOT(
         new InputStreamReader(getClass.getResourceAsStream("/projects-graph.dot"))

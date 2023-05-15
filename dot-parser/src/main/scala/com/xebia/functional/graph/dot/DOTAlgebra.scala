@@ -6,16 +6,16 @@ import fs2.Stream
 
 import java.io.{BufferedReader, FileReader, Reader}
 
-trait DOTParser[F[_]]:
+trait DOTAlgebra[F[_]]:
   def parseDOT(reader: Reader): F[DiGraph]
 
-object DOTParser:
+object DOTAlgebra:
 
   private val NodeRegEx = "^\"(.+)\"\\[.+]$".r
   private val NodeRelationRegEx = "^\"(.+)\" -> \"(.+)\" \\[(.+)]$".r
   private val KeyValueRegEx = "(.+)=\"?(.+)\"?".r
 
-  def impl[F[_]: Async]: DOTParser[F] = new DOTParser[F]:
+  def impl[F[_]: Async]: DOTAlgebra[F] = new DOTAlgebra[F]:
 
     private def readLine(br: BufferedReader): F[Option[(String, BufferedReader)]] =
       Async[F].delay(Option(br.readLine()).map((_, br)))
