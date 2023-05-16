@@ -32,7 +32,6 @@ lazy val `graph-enricher` = (project in file("graph-enricher"))
     name := "graph-enricher",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect"  % "3.4.8",
-      "co.fs2"        %% "fs2-io"       % "3.6.1",
-      "org.jgrapht"    % "jgrapht-core" % "1.5.2"
+      "co.fs2"        %% "fs2-io"       % "3.6.1"
     )
   ).dependsOn(`dot-parser`, `csv-parser`)

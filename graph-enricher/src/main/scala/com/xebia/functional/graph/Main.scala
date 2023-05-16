@@ -94,5 +94,8 @@ object Main extends IOApp:
         val diGraph = toDiGraph(graph, set)
         dotParser.writeDOT(new FileWriter(s"target/dot-$index-graph.dot"), diGraph)
       }
+      allLibraries = graph.modules.filter(_.extra.exists(_.moduleType.isLibrary)).filterNot(_.name.toLowerCase.contains("integrationtests")).toSet
+      diGraph = toDiGraph(graph, allLibraries)
+      _ <- dotParser.writeDOT(new FileWriter(s"target/libraries-graph.dot"), diGraph)
     yield ExitCode.Success
   }
